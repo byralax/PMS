@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParcelTrack - Parcel Management System</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --background-color: #ecf0f1;
+            --text-color: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+        }
+
+        nav {
+            background-color: var(--secondary-color);
+            padding: 1rem;
+            text-align: center;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #f1c40f;
+        }
+
+        .page {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input, 
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        #parcelTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        #parcelTable th, 
+        #parcelTable td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        #parcelTable th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+
+        .status-pending { background-color: #f39c12; color: white; }
+        .status-transit { background-color: #3498db; color: white; }
+        .status-delivered { background-color: #2ecc71; color: white; }
+        .status-delayed { background-color: #e74c3c; color: white; }
+
+        #trackParcelResult {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>ParcelTrack - Parcel Management System</h1>
+        </div>
+    </header>
+
+    <nav>
+        <a href="#" data-page="dashboard">Dashboard</a>
+        <a href="#" data-page="add-parcel">Add Parcel</a>
+        <a href="#" data-page="track-parcel">Track Parcel</a>
+    </nav>
+
+    <div class="container">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page active">
+            <h2>Parcel Overview</h2>
+            <table id="parcelTable">
+                <thead>
+                    <tr>
+                        <th>Tracking Number</th>
+                        <th>Sender</th>
+                        <th>Recipient</th>
+                        <th>Status</th>
+                        <th>Weight</th>
+                        <th>Estimated Delivery</th>
+                    </tr>
+                </thead>
+                <tbody id="parcelTableBody">
+                    <!-- Parcels will be dynamically added here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add Parcel Page -->
+        <div id="add-parcel" class="page">
+            <h2>Add New Parcel</h2>
+            <form id="parcelForm">
+                <div class="form-group">
+                    <label>Sender Name</label>
+                    <input type="text" id="senderName" required>
+                </div>
+                <div class="form-group">
+                    <label>Recipient Name</label>
+                    <input type="text" id="recipientName" required>
+                </div>
+                <div class="form-group">
+                    <label>Weight (kg)</label>
+                    <input type="number" id="parcelWeight" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="parcelStatus">
+                        <option value="pending">Pending</option>
+                        <option value="transit">In Transit</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="delayed">Delayed</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Add Parcel</button>
+            </form>
+        </div>
+
+        <!-- Track Parcel Page -->
+        <div id="track-parcel" class="page">
+            <h2>Track Your Parcel</h2>
+            <div class="form-group">
+                <label>Enter Tracking Number</label>
+                <input type="text" id="trackingNumberInput">
+            </div>
+            <button id="trackParcelBtn" class="btn">Track Parcel</button>
+            <div id="trackParcelResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // Parcel Management System
+        class ParcelManager {
+            constructor() {
+                this.parcels = JSON.parse(localStorage.getItem('parcels')) || [];
+                this.initEventListeners();
+                this.renderParcels();
+            }
+
+            initEventListeners() {
+                // Navigation
+                document.querySelectorAll('nav a').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.showPage(e.target.dataset.page);
+                    });
+                });
+
+                // Add Parcel Form
+                document.getElementById('parcelForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addParcel();
+                });
+
+                // Track Parcel
+                document.getElementById('trackParcelBtn').addEventListener('click', () => {
+                    this.trackParcel();
+                });
+            }
+
+            generateTrackingNumber() {
+                return `PT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+            }
+
+            addParcel() {
+                const parcel = {
+                    trackingNumber: this.generateTrackingNumber(),
+                    senderName: document.getElementById('senderName').value,
+                    recipientName: document.getElementById('recipientName').value,
+                    weight: document.getElementById('parcelWeight').value,
+                    status: document.getElementById('parcelStatus').value,
+                    createdAt: new Date().toLocaleString(),
+                    estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()
+                };
+
+                this.parcels.push(parcel);
+                this.saveParcels();
+                this.renderParcels();
+                this.resetForm();
+                alert(`Parcel added! Tracking Number: ${parcel.trackingNumber}`);
+            }
+
+            renderParcels() {
+                const tableBody = document.getElementById('parcelTableBody');
+                tableBody.innerHTML = '';
+
+                this.parcels.forEach(parcel => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${parcel.trackingNumber}</td>
+                        <td>${parcel.senderName}</td>
+                        <td>${parcel.recipientName}</td>
+                        <td><span class="status-badge status-${parcel.status}">${parcel.status.toUpperCase()}</span></td>
+                        <td>${parcel.weight} kg</td>
+                        <td>${parcel.estimatedDelivery}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+
+            trackParcel() {
+                const trackingNumber = document.getElementById('trackingNumberInput').value;
+                const resultDiv = document.getElementById('trackParcelResult');
+
+                const parcel = this.parcels.find(p => p.trackingNumber === trackingNumber);
+
+                if (parcel) {
+                    resultDiv.innerHTML = `
+                        <h3>Parcel Found</h3>
+                        <p><strong>Tracking Number:</strong> ${parcel.trackingNumber}</p>
+                        <p><strong>Sender:</strong> ${parcel.senderName}</p>
+                        <p><strong>Recipient:</strong> ${parcel.recipientName}</p>
+                        <p><strong>Status:</strong> <span class="status-badge status-${parcel.status}">${parcel.status.toUpperCase()}</span></p>
+                        <p><strong>Estimated Delivery:</strong> ${parcel.estimatedDelivery}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<p>No parcel found with this tracking number.</p>';
+                }
+            }
+
+            saveParcels() {
+                localStorage.setItem('parcels', JSON.stringify(this.parcels));
+            }
+
+            resetForm() {
+                document.getElementById('parcelForm').reset();
+            }
+        }
+
+        // Page Navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            const parcelManager = new ParcelManager();
+
+            // Navigation event listeners
+            document.querySelectorAll('nav a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showPage(e.target.dataset.page);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
